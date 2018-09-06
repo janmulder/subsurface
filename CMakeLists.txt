@@ -262,7 +262,12 @@ endif()
 
 #set up the subsurface_link_libraries variable
 set(SUBSURFACE_LINK_LIBRARIES ${SUBSURFACE_LINK_LIBRARIES} ${LIBDIVECOMPUTER_LIBRARIES} ${LIBGIT2_LIBRARIES} ${LIBUSB_LIBRARIES})
-qt5_add_resources(SUBSURFACE_RESOURCES subsurface.qrc map-widget/qml/map-widget.qrc)
+
+# desktop and mobile resources
+set(DESKTOP_MOBILE_RESOURCES subsurface.qrc map-widget/qml/map-widget.qrc)
+set(MOBILE_ONLY_RESOURCES
+	mobile-widgets/qml/mobile-resources.qrc
+	mobile-widgets/qml/kirigami/kirigami.qrc)
 
 # include translations
 add_subdirectory(translations)
@@ -271,6 +276,12 @@ add_subdirectory(qt-models)
 add_subdirectory(profile-widget)
 
 if (${SUBSURFACE_TARGET_EXECUTABLE} MATCHES "DesktopExecutable")
+	if  ("${Qt5Core_VERSION}" VERSION_LESS 5.11.0)
+		qt5_add_resources(SUBSURFACE_RESOURCES ${DESKTOP_MOBILE_RESOURCES})
+	else()
+		find_package(Qt5QuickCompiler)
+		qtquick_compiler_add_resources(SUBSURFACE_RESOURCES ${DESKTOP_MOBILE_RESOURCES})
+	endif()
 	add_subdirectory(desktop-widgets)
 endif()
 
@@ -297,8 +308,12 @@ if(${SUBSURFACE_TARGET_EXECUTABLE} MATCHES "MobileExecutable")
 	)
 	include_directories(${CMAKE_SOURCE_DIR}/mobile-widgets/qml/kirigami/src/libkirigami)
 	add_definitions(-DKIRIGAMI_BUILD_TYPE_STATIC)
-	qt5_add_resources(MOBILE_RESOURCES mobile-widgets/qml/mobile-resources.qrc)
-	qt5_add_resources(MOBILE_RESOURCES mobile-widgets/qml/kirigami/kirigami.qrc)
+	if  ("${Qt5Core_VERSION}" VERSION_LESS 5.11.0)
+		qt5_add_resources(MOBILE_RESOURCES ${DESKTOP_MOBILE_RESOURCES} ${MOBILE_ONLY_RESOURCES})
+	else()
+		find_package(Qt5QuickCompiler)
+		qtquick_compiler_add_resources(MOBILE_RESOURCES ${DESKTOP_MOBILE_RESOURCES} ${MOBILE_ONLY_RESOURCES})
+	endif()
 	# When building the mobile application in Android, link it and Qt will do the rest, when doing the mobile application on Desktop, create an executable.
 	if(ANDROID)
 		add_library(${SUBSURFACE_TARGET} SHARED ${SUBSURFACE_PKG} ${MOBILE_SRC} ${SUBSURFACE_RESOURCES} ${MOBILE_RESOURCES})
